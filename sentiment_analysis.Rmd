@@ -1,0 +1,99 @@
+---
+title: "Sentiment Analysis"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##### Collect some sample data (at least 20) from the Google-news,which include the keyword “Fitness” and “Wearables”. Calculate the sentiment of each record (or token), from the data source you have chosen.Identify the theme for twenty of them, and report them in a excel sheet file.
+##### Your result excel file should include three columns:
+##### • Tweet text or news entry.
+##### • Sentiment scores from different libraries (AfiNN, NRC, Bing ).
+##### • Theme, which is a keyword you have extracted from them. This means you should perform theme analysis manually as well.
+
+### Required Libraries
+```{r message=FALSE}
+library(knitr)
+library(syuzhet)
+library(rvest)
+library(tidyverse)
+library(dplyr)
+```
+
+### Function for Web Scrapping Google News with Keyword
+```{r }
+news <- function(term) {
+  
+  html_dat <- read_html(paste0("https://news.google.com/search?q=",term,"&hl=en-US&gl=US&ceid=US%3Aen"))
+  
+  dat <- data.frame(Link = html_dat %>%
+                      html_nodes('.VDXfz') %>% 
+                      html_attr('href')) %>% 
+    mutate(Link = gsub("./articles/","https://news.google.com/articles/",Link))
+  
+  news_dat <- data.frame(
+    Description =  html_dat %>%
+      html_nodes('.Rai5ob') %>% 
+      html_text(),
+    Link = dat$Link
+)
+  
+  return(news_dat)
+}
+```
+
+### Function for finding Sentiment scores from different libraries (AfiNN, NRC, Bing )
+```{r}
+find_sentiment <- function(news,theme){
+  
+  news$Description <- lapply(news$Description, as.vector)
+  news$Description = as.vector(as.character(news$Description))
+  
+  news$Syuzhet_Vector <- get_sentiment(news$Description, method="syuzhet")
+  news$Affin_Vector <- get_sentiment(news$Description, method="afinn")
+  news$Nrc_Vector <- get_sentiment(news$Description, method="nrc")
+  news$Bing_Vector <- get_sentiment(news$Description, method="bing")
+  news = head(news,20)
+  news$Theme <- theme
+  return(news)
+  
+}
+```
+
+### Function for finding Sentiment scores from different libraries (AfiNN, NRC, Bing )
+```{r warning=FALSE}
+data_analysis1 = data.frame(news("Fitness"))
+news_f = find_sentiment(data_analysis1,"Fitness")
+data_analysis2 = data.frame(news("Wearables"))
+news_w = find_sentiment(data_analysis2,"Wearables")
+data_analysis = bind_rows(news_f, news_w)
+
+write_csv(data_analysis,"/Users/ayshazenabkenza/Desktop/Web_Analytics/Sentiment_Analysis/sentiment_analysis.csv")
+```
+
+```{r}
+# creates a table of the one rows of "Fitness"
+kable(head(news_f,1), format = "markdown", digits = 2)
+```
+
+
+```{r}
+# creates a table of the one rows of "Fitness"
+kable(head(news_w,1), format = "markdown", digits = 2)
+```
+
+### Theme Analysis
+
+Fitness:  While analyzing, the text was based on either industry, equipment handling, or it was more like discussing the benefits of fitness. In later context the theme was more like Strength, workout, feel good, balance which indicating a positive influence of fitness. For former tone was business-oriented so the theme was like industry, equipment cost, equipment handling.
+
+
+Wearable: While analysing, the tone of the test was like what are the latest wearables and what is the latest technology used on it, and some of the benefits of using wearables.
+
+```{r echo=FALSE}
+theme_analysis <- data.frame("Fitness" = c("Equipment", "Industry", "Workout", "Strength", "Feel good", "Balance", "Supplements"), "Wearable" = c("Therapeutic", "Apple", "Technology", "Health", "Sports", "Fitness", "Waterproof" ))
+
+kable(head(theme_analysis), format = "markdown", digits = 2)
+```
+
